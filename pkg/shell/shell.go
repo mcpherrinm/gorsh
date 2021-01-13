@@ -24,7 +24,7 @@ func (e ExitError) Error() string {
 
 // a Shell is the active instance of a shell, created with shell.New
 type Shell struct {
-	in *bufio.Scanner
+	in io.Reader
 	out io.Writer
 
 	// Environment variables
@@ -40,7 +40,7 @@ type Shell struct {
 // New creates a shell with the given input and outputs.
 func New(input io.Reader, output io.Writer) *Shell {
 	return &Shell{
-		in:  bufio.NewScanner(input),
+		in:  input,
 		out: output,
 
 		env: map[string]string{
@@ -64,13 +64,14 @@ func (sh *Shell) Interact(ctx context.Context) error {
 			return err
 		}
 
+		scan := bufio.NewScanner(sh.in)
 		// Read input command:
-		if !sh.in.Scan() {
-			return sh.in.Err()
+		if !scan.Scan() {
+			return scan.Err()
 		}
 
 		// Parse command in a totally janky way
-		scanner := bufio.NewScanner(bytes.NewReader(sh.in.Bytes()))
+		scanner := bufio.NewScanner(bytes.NewReader(scan.Bytes()))
 		scanner.Split(bufio.ScanWords)
 		if !scanner.Scan() {
 			continue
@@ -106,6 +107,7 @@ func (sh *Shell) Interact(ctx context.Context) error {
 
 func (sh *Shell) Exec(ctx context.Context, args []string) (int, error) {
 	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin = sh.in
 	cmd.Stdout = sh.out
 	cmd.Stderr = sh.out
 	cmd.Dir = sh.cwd
