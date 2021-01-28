@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 )
 
@@ -51,6 +52,8 @@ func New(input io.Reader, output io.Writer) *Shell {
 			"exit": Exit,
 			"cd": CD,
 			"echo": Echo,
+			"ls": LS,
+			"pwd": Pwd,
 		},
 	}
 }
@@ -121,4 +124,12 @@ func (sh *Shell) Exec(ctx context.Context, args []string) (int, error) {
 		return 1, nil
 	}
 	return 0, nil
+}
+
+func (sh *Shell) Cwd() string {
+	if sh.cwd == "" {
+		cwd, _ := os.Getwd()
+		return cwd
+	}
+	return sh.cwd
 }
